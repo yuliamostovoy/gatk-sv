@@ -115,7 +115,8 @@ fi
 
 
 ###PREP INPUT FILES
-OVRTMP=`mktemp -d`
+#OVRTMP=`mktemp -d`
+OVRTMP="./spec_tmp"
 #Unzip SET1, if gzipped, restrict to contigs in $CONTIGS, rewrite non-conventional SVTYPES, and automatically set SVs with size <1 to 1
 if [ $( file ${SET1} | fgrep " gzip " | wc -l ) -gt 0 ] || \
    [ $( echo ${SET1} | awk -v FS="." '{ if ($NF ~ /gz|bgz/) print "TRUE" }' ) ]; then
@@ -204,6 +205,7 @@ if [ $( cat ${OVRTMP}/set2.bed | fgrep -v "#" | wc -l ) -gt 0 ]; then
   ${OVRTMP}/OVR1b.raw.txt
   sort -Vk1,1 -k2,2n ${OVRTMP}/OVR1b.raw.txt | uniq > ${OVRTMP}/OVR1b.raw.txt2
   mv ${OVRTMP}/OVR1b.raw.txt2 ${OVRTMP}/OVR1b.raw.txt
+
   #Intersect method 2 data
   bedtools intersect -loj -a ${OVRTMP}/set2.bed -b ${OVRTMP}/set1.bed > \
   ${OVRTMP}/OVR2.raw.bed
@@ -235,15 +237,27 @@ if [ $( cat ${OVRTMP}/set2.bed | fgrep -v "#" | wc -l ) -gt 0 ]; then
   ${OVRTMP}/OVR2b.raw.txt
   sort -Vk1,1 -k2,2n ${OVRTMP}/OVR2b.raw.txt | uniq > ${OVRTMP}/OVR2b.raw.txt2
   mv ${OVRTMP}/OVR2b.raw.txt2 ${OVRTMP}/OVR2b.raw.txt
+
   #Intersect method 3: any overlap, buffer ± $DIST, any svtype
-  bedtools intersect -loj -a ${OVRTMP}/set2.bed \
-  -b <( awk -v OFS="\t" -v DIST=${DIST} '{ $2=$2-DIST; $3=$3+DIST; print }' \
-        ${OVRTMP}/set1.bed | awk -v OFS="\t" '{ if ($2<0) $2=0; print }' ) | \
-  sort -Vk1,1 -k2,2n | uniq | awk -v FS="\t" -v OFS="\t" \
-  '{ if ($12==".") print $4, "NO_OVR"; else print $4, $NF }' \
-  | sort -Vk1,1 -k2,2n | uniq | \
-  awk -v OFS="\t" '{ if ($2=="NA") $2="1"; print $1, $2 }' > \
-  ${OVRTMP}/OVR3.raw.txt
+  #bedtools intersect -loj -a ${OVRTMP}/set2.bed \
+  #-b <( awk -v OFS="\t" -v DIST=${DIST} '{ $2=$2-DIST; $3=$3+DIST; print }' \
+  #      ${OVRTMP}/set1.bed | awk -v OFS="\t" '{ if ($2<0) $2=0; print }' ) | \
+  #sort -Vk1,1 -k2,2n | uniq | awk -v FS="\t" -v OFS="\t" \
+  #'{ if ($12==".") print $4, "NO_OVR"; else print $4, $NF }' \
+  #| sort -Vk1,1 -k2,2n | uniq | \
+  #awk -v OFS="\t" '{ if ($2=="NA") $2="1"; print $1, $2 }' > \
+  #${OVRTMP}/OVR3.raw.txt
+
+  #Intersect method 4: special insertion test: pos within DIST, SVLENs within 80% recip
+  awk 'BEGIN{OFS="\t"} $5=="INS" {$2=$2-50; $3=$3+50; print}' ${OVRTMP}/set1.bed > ${OVRTMP}/set1.ins.bed
+  awk 'BEGIN{OFS="\t"} $5=="INS" {$2=$2-50; $3=$3+50; print}' ${OVRTMP}/set2.bed > ${OVRTMP}/set2.ins.bed
+  bedtools intersect -loj -a ${OVRTMP}/set2.ins.bed -b ${OVRTMP}/set1.ins.bed > ${OVRTMP}/OVR3.raw.bed
+  rm ${OVRTMP}/set1.ins.bed
+  rm ${OVRTMP}/set2.ins.bed
+  awk -v FS="\t" -v OFS="\t" '{if ($8!="." && $6/$13 >= 0.9 && $13/$6 >= 0.9) print $4, $NF; else print $4, "NO_OVR"}' ${OVRTMP}/OVR3.raw.bed| sort -Vk1,1 -k2,2n | uniq | awk -v OFS="\t" '{ if ($2=="NA") $2="1"; print $1, $2 }' > ${OVRTMP}/OVR3.raw.txt
+  cut -f1 ${OVRTMP}/OVR3.raw.txt | fgrep -wvf - ${OVRTMP}/OVR1.raw.bed | awk -v OFS="\t" '{ print $4, "NO_OVR" }' | sort -Vk1,1 -k2,2n | uniq >> ${OVRTMP}/OVR3.raw.txt
+  sort -Vk1,1 -k2,2n ${OVRTMP}/OVR3.raw.txt | uniq > ${OVRTMP}/OVR3.raw.txt2
+  mv ${OVRTMP}/OVR3.raw.txt2 ${OVRTMP}/OVR3.raw.txt
 
   ###CONVERT INTERSECTIONS TO FINAL TABLE
   ${BIN}/compare_callsets_helper.R \

@@ -67,7 +67,7 @@ categoryBreakdown <- function(dat,norm=F){
   ab3.n <- length(which(!(ab3 %in% c(a1,a2,b1,b2))))
   f.n <- nrow(dat)-sum(c(a12.n,a1.n,a2.n,b12.n,b1.n,b2.n,ab3.n))
   if(sum(c(a12.n,a1.n,a2.n,b12.n,b1.n,b2.n,ab3.n,f.n))>0){
-    ovr <- (a12.n+a1.n+a2.n)/sum(c(a12.n,a1.n,a2.n,b12.n,b1.n,b2.n,ab3.n,f.n))
+    ovr <- (a12.n+a1.n+a2.n+ab3.n)/sum(c(a12.n,a1.n,a2.n,b12.n,b1.n,b2.n,f.n))
   }else{
     ovr <- NA
   }
