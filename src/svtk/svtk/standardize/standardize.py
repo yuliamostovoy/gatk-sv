@@ -14,7 +14,7 @@ INFO fields, with specified constraints:
   SVLEN:   SV length (-1 if translocation)
 """
 
-import os
+import os,sys
 import tempfile
 import pysam
 from svtk.utils import make_bnd_alt, NULL_GT
@@ -159,8 +159,11 @@ class VCFStandardizer:
         idx = 1
         for std_rec in self.standardize_records():
             # Apply size filter (but keep breakends (SVLEN=-1))
-            if 0 < std_rec.info['SVLEN'] < self.min_size:
-                continue
+            try:
+                if 0 < std_rec.info['SVLEN'] < self.min_size:
+                    continue
+            except:
+                print("%s" % std_rec)
 
             # Exclude insertions of unknown SVLEN
             if std_rec.info['SVTYPE'] == 'INS' and std_rec.info['SVLEN'] == -1:
@@ -171,7 +174,7 @@ class VCFStandardizer:
                 continue
 
             # Filter unstranded breakpoints
-            if std_rec.info['STRANDS'] not in '++ +- -+ --'.split():
+            if std_rec.info['SVTYPE']=='BND' and std_rec.info['STRANDS'] not in '++ +- -+ --'.split():
                 continue
 
             # Assign new variant IDs
@@ -322,10 +325,10 @@ def parse_bnd_strands(alt):
     Parses standard VCF BND ALT (e.g. N]1:1000]) for strandedness
 
     Note about parsing strands from BND ALT:
-    t[p[ piece extending to the right of p is joined after t (+-)
-    t]p] reverse comp piece extending left of p is joined after t (++)
-    ]p]t piece extending to the left of p is joined before t (-+)
-    [p[t reverse comp piece extending right of p is joined before t (--)
+    t[p[ piece extending to the right of p is joined after t (++)
+    t]p] reverse comp piece extending left of p is joined after t (+-)
+    ]p]t piece extending to the left of p is joined before t (--)
+    [p[t reverse comp piece extending right of p is joined before t (-+)
 
     Parameters
     ----------
@@ -338,10 +341,10 @@ def parse_bnd_strands(alt):
         ++,+-,-+,--
     """
     if alt.endswith('['):
-        return '+-'
-    elif alt.endswith(']'):
         return '++'
+    elif alt.endswith(']'):
+        return '+-'
     elif alt.startswith(']'):
-        return '-+'
-    elif alt.startswith('['):
         return '--'
+    elif alt.startswith('['):
+        return '-+'
