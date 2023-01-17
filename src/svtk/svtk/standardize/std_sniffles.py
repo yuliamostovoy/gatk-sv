@@ -18,7 +18,7 @@ class SnifflesStandardizer(VCFStandardizer):
 
         1) add CHR2 for all entries
         2) add END for BNDs
-        3) change STRAND STRANDS for BNDs
+        3) change STRAND to STRANDS for BNDs and change + to ++ / - to --
         4) add SVLEN for BNDs
         5) for non-BNDs, make sure SVLEN is positive (originally negative for DELs)
         """
@@ -27,7 +27,15 @@ class SnifflesStandardizer(VCFStandardizer):
 
         if std_rec.info['SVTYPE'] == 'BND':
             # ADD STRANDS
-            std_rec.info['STRANDS'] = raw_rec.info['STRAND']
+            if raw_rec.info['STRAND'] == '+':
+                std_rec.info['STRANDS'] = '++'
+            elif raw_rec.info['STRAND'] == '-':
+                std_rec.info['STRANDS'] = '--'
+            elif raw_rec.info['STRAND'] == '+-':
+                std_rec.info['STRANDS'] = raw_rec.info['STRAND']
+            else:
+                sys.stderr.write("Error, unknown strand detected: %s\n" % raw_rec.info['STRAND'])
+                sys.exit(1)
 
             # ADD SVLEN
             if 'SVLEN' not in raw_rec.info:
@@ -55,7 +63,7 @@ class SnifflesStandardizer(VCFStandardizer):
         std_rec.info['CHR2'] = chr2
         std_rec.stop = end
 
-        std_rec.info['ALGORITHMS'] = ['sniffles']
+        std_rec.info['ALGORITHMS'] = ['sniffles2']
 
         return std_rec
 
