@@ -5,7 +5,7 @@ std_pbsv.py
 
 Standardize PBSV records.
 """
-
+import sys
 from collections import deque
 from .standardize import VCFStandardizer, parse_bnd_pos, parse_bnd_strands
 from svtk.utils import is_smaller_chrom
@@ -115,6 +115,7 @@ class PBSVStandardizer(VCFStandardizer):
         """
 
         source = std_rec.info['ALGORITHMS'][0]
+        null_GTs = [(0, 0), (None, None), (0, ), (None, )]
 
         # Add per-sample genotypes and copy CN, AD, and DP if they exist
         for sample, std_sample in zip(raw_rec.samples, self.std_sample_names):
@@ -128,11 +129,15 @@ class PBSVStandardizer(VCFStandardizer):
                     gt = (1,)
             std_rec.samples[std_sample]['GT'] = gt
 
+#            sys.stderr.write("%s\t%s\t%s\n" % (sample, raw_rec.id, raw_rec.samples[sample]['AD']))
             if 'AD' in raw_rec.samples[sample]:
-                RR, SR = raw_rec.samples[sample]['AD']
-                std_rec.samples[std_sample]['SR'] = SR
-                std_rec.samples[std_sample]['RR'] = RR
-                std_rec.samples[std_sample]['GQ'] = min(99, 3*(RR+SR))
+                if raw_rec.samples[sample]['GT'] in null_GTs:
+                    std_rec.samples[std_sample]['SR'], std_rec.samples[std_sample]['RR'], std_rec.samples[std_sample]['GQ'] = None, None, None
+                else:
+                    RR, SR = raw_rec.samples[sample]['AD']
+                    std_rec.samples[std_sample]['SR'] = SR
+                    std_rec.samples[std_sample]['RR'] = RR
+                    std_rec.samples[std_sample]['GQ'] = min(99, 3*(RR+SR))
 
                 std_rec.samples[std_sample][source] = 1
             else:

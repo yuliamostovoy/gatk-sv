@@ -3,6 +3,7 @@
 ##ALT=<ID=DUP,Description="Duplication">
 ##ALT=<ID=INV,Description="Inversion">
 ##ALT=<ID=BND,Description="Translocation">
+##ALT=<ID=INS,Description="Insertion">
 ##FILTER=<ID=PASS,Description="All filters passed">
 ##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
 ##INFO=<ID=CHR2,Number=1,Type=String,Description="Chromosome for END coordinate">
@@ -13,8 +14,6 @@
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 ##FORMAT=<ID=GL,Number=G,Type=Float,Description="Log10-scaled genotype likelihoods for RR,RA,AA genotypes">
 ##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
-##FORMAT=<ID=PE,Number=1,Type=Integer,Description="Number of supporting discordant pairs">
-##FORMAT=<ID=DR,Number=1,Type=Integer,Description="Number of reference pairs spanning breakpoint">
 ##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Number of supporting split reads">
 ##FORMAT=<ID=RR,Number=1,Type=Integer,Description="Number of reference reads spanning breakpoint">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT

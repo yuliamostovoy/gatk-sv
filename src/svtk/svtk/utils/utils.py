@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 """
 utils.py
 
@@ -82,13 +80,13 @@ def make_bnd_alt(chrom, pos, strands, ref_base='N'):
     p = '{0}:{1}'.format(chrom, pos)
     t = ref_base
 
-    if strands == '++':
+    if strands == '+-':
         fmt = '{1}]{0}]'
-    elif strands == '+-':
+    elif strands == '++':
         fmt = '{1}[{0}['
-    elif strands == '-+':
-        fmt = ']{0}]{1}'
     elif strands == '--':
+        fmt = ']{0}]{1}'
+    elif strands == '-+':
         fmt = '[{0}[{1}'
 
     return fmt.format(p, t)
@@ -107,7 +105,7 @@ def get_called_samples(record, include_null=False):
     Returns
     -------
     samples : list of str
-        Sorted list of sample IDs with a variant call
+
     """
 
     samples = deque()
@@ -125,10 +123,10 @@ def get_called_samples(record, include_null=False):
 
 # TODO: check if record is CPX and make entry per complex interval
 def vcf2bedtool(vcf, split_bnd=True, include_samples=False,
-                include_strands=True, split_cpx=False, include_infos=None,
-                annotate_ins=True, report_alt=False, svtypes=None,
-                no_sort_coords=False, simple_sinks=False,
-                include_unresolved=True, include_filters=False):
+            include_strands=True, split_cpx=False, include_infos=None,
+            annotate_ins=True, report_alt=False, svtypes=None,
+            no_sort_coords=False, simple_sinks=False,
+            include_unresolved=True, include_filters=False):
     """
     Wrap VCF as a bedtool. Necessary as pybedtools does not support SV in VCF.
 
@@ -186,148 +184,148 @@ def vcf2bedtool(vcf, split_bnd=True, include_samples=False,
         entry += '\t{filters}'
     entry += '\n'
 
-    def _format_info(info):
-        if info is None:
-            return 'NA'
-        elif isinstance(info, tuple) or isinstance(info, list):
-            return ','.join([str(x) for x in info])
-        else:
-            return str(info)
+def _format_info(info):
+    if info is None:
+        return 'NA'
+    elif isinstance(info, tuple) or isinstance(info, list):
+        return ','.join([str(x) for x in info])
+    else:
+        return str(info)
 
-    # Convert each record in vcf to bed entry
-    def _converter():
-        for record in vcf:
-            if svtypes is not None and record.info['SVTYPE'] not in svtypes:
+# Convert each record in vcf to bed entry
+def _converter():
+    for record in vcf:
+        if svtypes is not None and record.info['SVTYPE'] not in svtypes:
+            continue
+        if not include_unresolved:
+            if 'UNRESOLVED' in record.info.keys() \
+                    or 'UNRESOLVED_TYPE' in record.info.keys() \
+                    or 'UNRESOLVED' in record.filter:
                 continue
-            if not include_unresolved:
-                if 'UNRESOLVED' in record.info.keys() \
-                        or 'UNRESOLVED_TYPE' in record.info.keys() \
-                        or 'UNRESOLVED' in record.filter:
-                    continue
 
-            chrom = record.chrom
-            name = record.id
+        chrom = record.chrom
+        name = record.id
 
-            # Set start & end coordinates to appropriate sorted order
-            # for all records (to not break bedtools)
-            if no_sort_coords:
-                start = int(record.pos)
-                end = int(record.stop)
-            else:
-                start, end = sorted([int(record.pos), int(record.stop)])
+        # Set start & end coordinates to appropriate sorted order
+        # for all records (to not break bedtools)
+        if no_sort_coords:
+            start = int(record.pos)
+            end = int(record.stop)
+        else:
+            start, end = sorted([int(record.pos), int(record.stop)])
 
-            # Subtract 1bp from pos to convert to 0-based BED vs 1-based VCF
-            start = max([0, int(start) - 1])
+        # Subtract 1bp from pos to convert to 0-based BED vs 1-based VCF
+        start = max([0, int(start) - 1])
 
-            if report_alt:
-                svtype = record.alts[0].strip('<>')
-            else:
-                svtype = record.info['SVTYPE']
+        if report_alt:
+            svtype = record.alts[0].strip('<>')
+        else:
+            svtype = record.info['SVTYPE']
 
-            if include_strands:
-                try:
-                    strands = record.info.get('STRANDS', None)
-                except ValueError:
-                    strands = None
-                strands = '.' if strands is None else strands
-            if include_samples:
-                samples = ','.join(get_called_samples(record))
-            if include_infos:
-                infos = deque()
-                for key in include_infos:
-                    # Can't access END through info
-                    if key == 'END':
-                        infos.append(record.stop)
-                    else:
-                        infos.append(record.info.get(key))
+        if include_strands:
+            try:
+                strands = record.info.get('STRANDS', None)
+            except ValueError:
+                strands = None
+            strands = '.' if strands is None else strands
+        if include_samples:
+            samples = ','.join(get_called_samples(record))
+        if include_infos:
+            infos = deque()
+            for key in include_infos:
+                # Can't access END through info
+                if key == 'END':
+                    infos.append(record.stop)
+                else:
+                    infos.append(record.info.get(key))
 
-                # reformat for tabular output
-                infos = [_format_info(v) for v in infos]
-                infos = '\t'.join(infos)
-            if include_filters:
-                filters = [f for f in record.filter]
-                filters = ','.join(filters)
+            # reformat for tabular output
+            infos = [_format_info(v) for v in infos]
+            infos = '\t'.join(infos)
+        if include_filters:
+            filters = [f for f in record.filter]
+            filters = ','.join(filters)
 
-            if record.info.get('SVTYPE', None) == 'BND':
-                # First end of breakpoint
+        if record.info.get('SVTYPE', None) == 'BND':
+            # First end of breakpoint
+            start = max([0, int(record.pos) - 1])
+            end = record.pos
+            yield entry.format(**locals())
+
+            # Second end of breakpoint
+            if split_bnd:
+                chrom = record.info['CHR2']
+                start = max([0, int(record.stop) - 1])
+                end = record.stop
+                yield entry.format(**locals())
+
+        elif record.info.get('SVTYPE', None) == 'INS':
+            # Only yield insertion sinks for now
+            # Treat them as deletions
+            # TODO: rename CPX_INTERVALS to SOURCE for insertions
+            if annotate_ins:
+                svtype = 'DEL'
+            # if not no_sort_coords:
+            #     start, end = sorted([start, end])
+            # Reduce insertion sinks to single-bp intervals if optioned
+            if simple_sinks:
+                start = max([0, int(record.pos)])
+                end = start + 1
+            yield entry.format(**locals())
+
+        elif record.info.get('SVTYPE', None) == 'CTX':
+            start = max([0, int(record.pos) - 1])
+            end = start + 1
+            yield entry.format(**locals())
+
+            # Second end of breakpoint
+            if split_bnd:
+                chrom = record.info['CHR2']
+                start = max([0, int(record.stop) - 1])
+                end = record.stop
+                yield entry.format(**locals())
+
+        # Deconstruct complex intervals, if optioned
+        elif 'CPX_INTERVALS' in record.info and split_cpx:
+            # If complex, all constituent intervals are in CPX_INTERVALS
+            for interval in record.info['CPX_INTERVALS']:
+                svtype, region = interval.split('_')
+                chrom, coords = region.split(':')
+                start, end = coords.split('-')
+                start = max([0, int(start) - 1])
+                yield entry.format(**locals())
+            # If complex insertion, return insertion point as 1bp DEL
+            if record.info.get('CPX_TYPE', None) in cpx_ins_classes:
+                svtype = 'DEL'
+                chrom = record.chrom
                 start = max([0, int(record.pos) - 1])
                 end = record.pos
                 yield entry.format(**locals())
 
-                # Second end of breakpoint
-                if split_bnd:
-                    chrom = record.info['CHR2']
-                    start = max([0, int(record.stop) - 1])
-                    end = record.stop
-                    yield entry.format(**locals())
+        # elif (record.info.get('SVTYPE', None) == 'CPX' and
+        #       'CPX_TYPE' in record.info.keys()):
+        #     if (record.info.get('CPX_TYPE', None) in cpx_ins_classes):
+        #         if annotate_ins:
+        #             svtype = 'DEL'
+        #         yield entry.format(**locals())
 
-            elif record.info.get('SVTYPE', None) == 'INS':
-                # Only yield insertion sinks for now
-                # Treat them as deletions
-                # TODO: rename CPX_INTERVALS to SOURCE for insertions
-                if annotate_ins:
-                    svtype = 'DEL'
-                # if not no_sort_coords:
-                #     start, end = sorted([start, end])
-                # Reduce insertion sinks to single-bp intervals if optioned
-                if simple_sinks:
-                    start = max([0, int(record.pos)])
-                    end = start + 1
-                yield entry.format(**locals())
+        #     if split_cpx:
+        #         if 'dDUP' in record.info.get('CPX_TYPE', None):
+        #             svtype = 'DUP'
+        #         else:
+        #             svtype = 'INS'
+        #         source = record.info.get('SOURCE')
+        #         region = source.split('_')[1]
+        #         chrom, coords = region.split(':')
+        #         start, end = coords.split('-')
+        #         yield entry.format(**locals())
 
-            elif record.info.get('SVTYPE', None) == 'CTX':
-                start = max([0, int(record.pos) - 1])
-                end = start + 1
-                yield entry.format(**locals())
-
-                # Second end of breakpoint
-                if split_bnd:
-                    chrom = record.info['CHR2']
-                    start = max([0, int(record.stop) - 1])
-                    end = record.stop
-                    yield entry.format(**locals())
-
-            # Deconstruct complex intervals, if optioned
-            elif 'CPX_INTERVALS' in record.info and split_cpx:
-                # If complex, all constituent intervals are in CPX_INTERVALS
-                for interval in record.info['CPX_INTERVALS']:
-                    svtype, region = interval.split('_')
-                    chrom, coords = region.split(':')
-                    start, end = coords.split('-')
-                    start = max([0, int(start) - 1])
-                    yield entry.format(**locals())
-                # If complex insertion, return insertion point as 1bp DEL
-                if record.info.get('CPX_TYPE', None) in cpx_ins_classes:
-                    svtype = 'DEL'
-                    chrom = record.chrom
-                    start = max([0, int(record.pos) - 1])
-                    end = record.pos
-                    yield entry.format(**locals())
-
-            # elif (record.info.get('SVTYPE', None) == 'CPX' and
-            #       'CPX_TYPE' in record.info.keys()):
-            #     if (record.info.get('CPX_TYPE', None) in cpx_ins_classes):
-            #         if annotate_ins:
-            #             svtype = 'DEL'
-            #         yield entry.format(**locals())
-
-            #     if split_cpx:
-            #         if 'dDUP' in record.info.get('CPX_TYPE', None):
-            #             svtype = 'DUP'
-            #         else:
-            #             svtype = 'INS'
-            #         source = record.info.get('SOURCE')
-            #         region = source.split('_')[1]
-            #         chrom, coords = region.split(':')
-            #         start, end = coords.split('-')
-            #         yield entry.format(**locals())
-
-            else:
-                if not no_sort_coords:
-                    start, end = sorted([start, end])
-                    if start == end:
-                        end += 1
-                yield entry.format(**locals())
+        else:
+            if not no_sort_coords:
+                start, end = sorted([start, end])
+                if start == end:
+                    end += 1
+            yield entry.format(**locals())
 
     return pbt.BedTool(_converter()).saveas()
 
@@ -383,13 +381,13 @@ def samples_overlap(samplesA, samplesB, upper_thresh=0.5, lower_thresh=0.5):
         samplesA = get_called_samples(samplesA)
         samplesB = get_called_samples(samplesB)
 
-    # Get lists of called samples for each record
+# Get lists of called samples for each record
     if samplesA is not set:
         samplesA = set(samplesA)
     if samplesB is not set:
         samplesB = set(samplesB)
 
-    # Compute fraction of each record's samples which are shared
+# Compute fraction of each record's samples which are shared
     if len(samplesA) > 0 and len(samplesB) > 0:
         shared = samplesA & samplesB
         fracA = len(shared) / len(samplesA)
