@@ -8,3 +8,4 @@ from .std_scramble import ScrambleStandardizer
 from .std_smoove import SmooveStandardizer
 from .std_pbsv import PBSVStandardizer
 from .std_sniffles import SnifflesStandardizer
+from .std_pav import PAVStandardizer
