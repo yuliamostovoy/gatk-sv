@@ -105,9 +105,16 @@ class SnifflesStandardizer(VCFStandardizer):
         # Copy GT and GQ and rename SR and RR
         for sample, std_sample in zip(raw_rec.samples, self.std_sample_names):
             std_rec.samples[std_sample]['GT'] = raw_rec.samples[sample]['GT']
-            std_rec.samples[std_sample]['GQ'] = raw_rec.samples[sample]['GQ']
-            std_rec.samples[std_sample]['RR'] = raw_rec.samples[sample]['DR']
-            std_rec.samples[std_sample]['SR'] = raw_rec.samples[sample]['DV']
+            if 'GQ' not in raw_rec.samples[sample] and 'PL' in raw_rec.samples[sample]: # format written by LRcaller
+                std_rec.samples[std_sample]['GQ'] = sorted(list(raw_rec.samples[sample]['PL']))[1] # the GQ is the second-largest PL
+                RR, SR, total = raw_rec.samples[sample]['AD']
+                std_rec.samples[std_sample]['SR'] = SR
+                std_rec.samples[std_sample]['RR'] = RR
+
+            else: # original sniffles format
+                std_rec.samples[std_sample]['GQ'] = raw_rec.samples[sample]['GQ']
+                std_rec.samples[std_sample]['RR'] = raw_rec.samples[sample]['DR']
+                std_rec.samples[std_sample]['SR'] = raw_rec.samples[sample]['DV']
 
 
         return std_rec

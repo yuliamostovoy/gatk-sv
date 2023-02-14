@@ -130,7 +130,14 @@ class PBSVStandardizer(VCFStandardizer):
             std_rec.samples[std_sample]['GT'] = gt
 
 #            sys.stderr.write("%s\t%s\t%s\n" % (sample, raw_rec.id, raw_rec.samples[sample]['AD']))
-            if 'AD' in raw_rec.samples[sample]:
+            if 'PL' in raw_rec.samples[sample]: # written by LRcaller along with new AD
+                std_rec.samples[std_sample]['GQ'] = sorted(list(raw_rec.samples[sample]['PL']))[1] # the GQ is the second-largest PL
+                RR, SR, total = raw_rec.samples[sample]['AD']
+                std_rec.samples[std_sample]['SR'] = SR
+                std_rec.samples[std_sample]['RR'] = RR
+                std_rec.samples[std_sample][source] = 1
+
+            elif 'AD' in raw_rec.samples[sample]: # no PL means this AD is the one originally written by pbsv
                 if raw_rec.samples[sample]['GT'] in null_GTs:
                     std_rec.samples[std_sample]['SR'], std_rec.samples[std_sample]['RR'], std_rec.samples[std_sample]['GQ'] = None, None, None
                 else:
@@ -138,8 +145,8 @@ class PBSVStandardizer(VCFStandardizer):
                     std_rec.samples[std_sample]['SR'] = SR
                     std_rec.samples[std_sample]['RR'] = RR
                     std_rec.samples[std_sample]['GQ'] = min(99, 3*(RR+SR))
-
                 std_rec.samples[std_sample][source] = 1
+
             else:
                 std_rec.samples[std_sample][source] = 0
                 std_rec.samples[std_sample]['GQ'] = 1
