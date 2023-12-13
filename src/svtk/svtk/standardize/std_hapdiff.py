@@ -53,8 +53,8 @@ class HapdiffStandardizer(VCFStandardizer):
 
         if std_rec.info['SVTYPE'] == 'INV':
             std_rec.info['SVLEN'] = abs(std_rec.stop-std_rec.pos)
-
-        if std_rec.info['SVTYPE'] == 'BND':
+            chr2, end = raw_rec.chrom, raw_rec.stop
+        elif std_rec.info['SVTYPE'] == 'BND':
             # ADD STRANDS
             std_rec.info['STRANDS'] = parse_bnd_strands(raw_rec.alts[0])
 
