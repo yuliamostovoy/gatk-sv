@@ -43,13 +43,16 @@ class HapdiffStandardizer(VCFStandardizer):
         1) add CHR2 for all entries
         2) add END for BNDs
         3) add STRANDS for BNDs
-        4) add SVLEN for BNDs
+        4) add SVLEN for BNDs and INVs
         5) for non-BNDs, make sure SVLEN is positive (originally negative for DELs)
         """
 
         std_rec.info['SVTYPE'] = raw_rec.info['SVTYPE']
         if raw_rec.info['SVTYPE'] == 'DUP:TANDEM':
             std_rec.info['SVTYPE'] = 'DUP'
+
+        if std_rec.info['SVTYPE'] == 'INV':
+            std_rec.info['SVLEN'] = abs(std_rec.stop-std_rec.pos)
 
         if std_rec.info['SVTYPE'] == 'BND':
             # ADD STRANDS
