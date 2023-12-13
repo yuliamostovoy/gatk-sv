@@ -158,12 +158,9 @@ class VCFStandardizer:
 
         idx = 1
         for std_rec in self.standardize_records():
-            # Apply size filter (but keep breakends (SVLEN=-1))
-            try:
-                if 0 < std_rec.info['SVLEN'] < self.min_size:
-                    continue
-            except:
-                print("%s" % std_rec)
+            # Apply size filter (but keep breakends)
+            if std_rec.info['SVTYPE']!='BND' and abs(std_rec.info['SVLEN']) < self.min_size:
+                continue
 
             # Exclude insertions of unknown SVLEN
             if std_rec.info['SVTYPE'] == 'INS' and std_rec.info['SVLEN'] == -1:
