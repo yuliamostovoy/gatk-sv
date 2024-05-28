@@ -10,3 +10,4 @@ from .std_pbsv import PBSVStandardizer
 from .std_sniffles import SnifflesStandardizer
 from .std_pav import PAVStandardizer
 from .std_hapdiff import HapdiffStandardizer
+from .std_merged_pbsv_sniffles import Merge2Standardizer
